@@ -37,11 +37,40 @@ static const CGFloat DefaultCellHeight = 40.0;
 {
     self.dataSource = nil;
     self.delegate = nil;
+    
+    [self removeObserver];
 }
 
-- (__kindof MJKTableViewCell *)dequeueReusableCellWithIdentifier:(NSString *)identifier
+- (instancetype)initWithFrame:(CGRect)frame
+{
+    self = [super initWithFrame:frame];
+    if (self) {
+        [self addObserver];
+    }
+    
+    return self;
+}
+
+- (__kindof MJKTableViewCell *)dequeueReusableCellWithIdentifier:(NSString *)identifier forIndexPath:(NSIndexPath *)indexPath
 {
     __block MJKTableViewCell *cell = nil;
+    //1.先从可见的visiableCellSet取
+    [self.visiableCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull obj, BOOL * _Nonnull stop) {
+        if (![obj.reuseIdentifier isEqual:identifier]) {
+            return;
+        }
+        
+        if ((obj.indexPath.section ==  indexPath.section) && (obj.indexPath.row ==  indexPath.row)) {
+            cell = obj;
+            *stop = YES;
+        }
+    }];
+
+    if (cell) {
+        return cell;
+    }
+
+    //2.再从缓存的cacheCellSet取
     [self.cacheCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull obj, BOOL * _Nonnull stop) {
         if ([obj.reuseIdentifier isEqual:identifier]) {
             cell = obj;
@@ -66,17 +95,6 @@ static const CGFloat DefaultCellHeight = 40.0;
 }
 
 #pragma mark - Override 
-
-- (void)layoutSubviews
-{
-    NSLog(@"------layoutSubviews------s----");
-
-    [super layoutSubviews];;
-    
-    [self layoutNeedDisplayCells];
-    
-    NSLog(@"------layoutSubviews-------e---");
-}
 
 - (void)didMoveToSuperview
 {
@@ -105,6 +123,31 @@ static const CGFloat DefaultCellHeight = 40.0;
     return _cellInfoArray;
 }
 
+#pragma mark - Notification
+
+- (void)addObserver
+{
+    [self addObserver:self forKeyPath:NSStringFromSelector(@selector(contentOffset)) options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:nil];
+}
+
+- (void)removeObserver
+{
+    [self removeObserver:self forKeyPath:NSStringFromSelector(@selector(contentOffset))];
+}
+
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
+{
+    if (![keyPath isEqualToString:NSStringFromSelector(@selector(contentOffset))]) {
+        return;
+    }
+    
+    CGPoint contentOffsetOld  = [change[NSKeyValueChangeOldKey] CGPointValue];
+    CGPoint contentOffset = [change[NSKeyValueChangeNewKey] CGPointValue];
+    if (!CGPointEqualToPoint(contentOffsetOld, contentOffset)) {
+        [self layoutNeedDisplayCells];
+    }
+}
+
 #pragma mark - PrivateMethod
 
 - (void)analyzeCellInfosAndCalculateContentSize
@@ -129,6 +172,7 @@ static const CGFloat DefaultCellHeight = 40.0;
                 cellHeight = [(id<MJKTableViewDelegate>)self.delegate tableView:self heightForRowAtIndexPath:indexPath];
             }
             
+            //记录每一个Cell的位置
             MJKCellInfo *cellInfo = [[MJKCellInfo alloc] init];
             cellInfo.indexPath = indexPath;
             //当前的cell y就是之前all cell height
@@ -175,9 +219,11 @@ static const CGFloat DefaultCellHeight = 40.0;
         MJKTableViewCell *cell = [(id<MJKTableViewDataSource>)self.dataSource tableView:self cellForRowAtIndexPath:cellInfo.indexPath];
         cell.indexPath = cellInfo.indexPath;
         [cell setFrame:cellInfo.frame];
-        //把cell添加到View上
-        [self addSubview:cell];
-        
+        if (![cell superview]) {
+            //把cell添加到View上
+            [self addSubview:cell];
+        }
+
         //把cell标记为可见的cell
         [currentVisiableCellSet addObject:cell];
     }
@@ -221,10 +267,13 @@ static const CGFloat DefaultCellHeight = 40.0;
     
     MJKCellInfo *cellInfo = [self.cellInfoArray objectAtIndex:middleIndex];
     if (cellInfo.frame.origin.y <= yOffset  && cellInfo.frame.origin.y + cellInfo.frame.size.height > yOffset) {
+        //cell的y小于yOffset 但是cell的bottom一定要大于yOffset
         return middleIndex;
     } else if (cellInfo.frame.origin.y > yOffset ) {
+        //cell的y大于yOffset
         return [self getIndexForYOffset:yOffset startIndex:startIndex endIndex:middleIndex - 1 ];
     } else {
+        //cell的y小于yOffset 切cell的bottom也要小于yOffset
         return [self getIndexForYOffset:yOffset startIndex:middleIndex + 1 endIndex:endIndex];
     }
 }

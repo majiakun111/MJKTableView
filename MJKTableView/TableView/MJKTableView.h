@@ -36,7 +36,7 @@
 @property (nonatomic, weak) id<MJKTableViewDataSource> dataSource;
 @property (nonatomic, weak) id<MJKTableViewDelegate> delegate;
 
-- (__kindof MJKTableViewCell *)dequeueReusableCellWithIdentifier:(NSString *)identifier;
+- (__kindof MJKTableViewCell *)dequeueReusableCellWithIdentifier:(NSString *)identifier forIndexPath:(NSIndexPath *)indexPath;
 
 - (void)reloadData;
 

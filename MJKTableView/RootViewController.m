@@ -70,7 +70,7 @@
 - (MJKTableViewCell *)tableView:(MJKTableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     static NSString * const cellIdentifer = @"Cell";
-    Cell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifer];
+    Cell *cell = [tableView dequeueReusableCellWithIdentifier:cellIdentifer forIndexPath:indexPath];
     if (!cell) {
         cell = [[Cell alloc] initWithReuseIdentifer:cellIdentifer];
     }
