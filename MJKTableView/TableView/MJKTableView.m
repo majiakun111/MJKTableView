@@ -158,18 +158,18 @@ static const CGFloat DefaultCellHeight = 40.0;
     
     self.cellInfoArray = nil;
     NSInteger sections = 1;
-    if ([(id<MJKTableViewDataSource>)self.delegate respondsToSelector:@selector(numberOfSectionsInTableView:)]) {
-        sections = [(id<MJKTableViewDataSource>)self.delegate numberOfSectionsInTableView:self];
+    if ([self.dataSource respondsToSelector:@selector(numberOfSectionsInTableView:)]) {
+        sections = [self.dataSource numberOfSectionsInTableView:self];
     }
     
     CGFloat totalHeight = 0.0;
     for (NSInteger section = 0; section < sections; section++) {
-        NSInteger rows = [(id<MJKTableViewDataSource>)self.delegate tableView:self numberOfRowsInSection:section];
+        NSInteger rows = [self.dataSource tableView:self numberOfRowsInSection:section];
         for (NSInteger row = 0; row < rows ; row++) {
             NSIndexPath *indexPath = [NSIndexPath indexPathForRow:row inSection:section];
             CGFloat cellHeight = DefaultCellHeight;
-            if ([(id<MJKTableViewDelegate>)self.delegate respondsToSelector:@selector(tableView:heightForRowAtIndexPath:)]) {
-                cellHeight = [(id<MJKTableViewDelegate>)self.delegate tableView:self heightForRowAtIndexPath:indexPath];
+            if ([self.delegate respondsToSelector:@selector(tableView:heightForRowAtIndexPath:)]) {
+                cellHeight = [self.delegate tableView:self heightForRowAtIndexPath:indexPath];
             }
             
             //记录每一个Cell的位置
@@ -217,7 +217,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     NSMutableSet<MJKTableViewCell*> *currentVisiableCellSet = [[NSMutableSet alloc] init];
     for (MJKCellInfo *cellInfo in needDisplayCellInfoArray) {
         
-        MJKTableViewCell *cell = [(id<MJKTableViewDataSource>)self.dataSource tableView:self cellForRowAtIndexPath:cellInfo.indexPath];
+        MJKTableViewCell *cell = [self.dataSource tableView:self cellForRowAtIndexPath:cellInfo.indexPath];
         cell.indexPath = cellInfo.indexPath;
         [cell setFrame:cellInfo.frame];
         if (![cell superview]) {
