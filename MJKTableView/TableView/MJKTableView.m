@@ -23,7 +23,7 @@ static const CGFloat DefaultCellHeight = 40.0;
 
 @interface MJKTableView ()
 
-@property (nonatomic, strong) NSSet<MJKTableViewCell*> *visiableCellSet;
+@property (nonatomic, strong) NSSet<MJKTableViewCell*> *lastVisiableCellSet;
 @property (nonatomic, strong) NSMutableSet<MJKTableViewCell*> *cacheCellSet;
 @property (nonatomic, strong) NSMutableArray<MJKCellInfo*> *cellInfoArray;
 
@@ -54,8 +54,8 @@ static const CGFloat DefaultCellHeight = 40.0;
 - (__kindof MJKTableViewCell *)dequeueReusableCellWithIdentifier:(NSString *)identifier forIndexPath:(NSIndexPath *)indexPath
 {
     __block MJKTableViewCell *cell = nil;
-    //1.先从可见的visiableCellSet取
-    [self.visiableCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull obj, BOOL * _Nonnull stop) {
+    //1.先从可见的lastVisiableCellSet取
+    [self.lastVisiableCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull obj, BOOL * _Nonnull stop) {
         if (![obj.reuseIdentifier isEqual:identifier]) {
             return;
         }
@@ -65,11 +65,11 @@ static const CGFloat DefaultCellHeight = 40.0;
             *stop = YES;
         }
     }];
-
+    
     if (cell) {
         return cell;
     }
-
+    
     //2.再从缓存的cacheCellSet取
     [self.cacheCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull obj, BOOL * _Nonnull stop) {
         if ([obj.reuseIdentifier isEqual:identifier]) {
@@ -94,7 +94,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     [self layoutNeedDisplayCells];
 }
 
-#pragma mark - Override 
+#pragma mark - Override
 
 - (void)didMoveToSuperview
 {
@@ -155,7 +155,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     if (!self.delegate) {
         return;
     }
-
+    
     self.cellInfoArray = nil;
     NSInteger sections = 1;
     if ([(id<MJKTableViewDataSource>)self.delegate respondsToSelector:@selector(numberOfSectionsInTableView:)]) {
@@ -199,11 +199,12 @@ static const CGFloat DefaultCellHeight = 40.0;
     }
     
     //把之前可见 现在不可见的放入到cacheCellMap后并父视图中移除
-    [self.visiableCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull cell, BOOL * _Nonnull stop) {
+    [self.lastVisiableCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull cell, BOOL * _Nonnull stop) {
         BOOL result = NO;
         for (MJKCellInfo *cellInfo in needDisplayCellInfoArray) {
             if ((cellInfo.indexPath.section == cell.indexPath.section) && (cellInfo.indexPath.row == cell.indexPath.row)) {
                 result = YES;
+                break;
             }
         }
         
@@ -223,12 +224,12 @@ static const CGFloat DefaultCellHeight = 40.0;
             //把cell添加到View上
             [self addSubview:cell];
         }
-
+        
         //把cell标记为可见的cell
         [currentVisiableCellSet addObject:cell];
     }
     
-    self.visiableCellSet = currentVisiableCellSet;
+    self.lastVisiableCellSet = currentVisiableCellSet;
 }
 
 - (NSArray<MJKCellInfo*> *)getNeedDisplayCellInfoArray
