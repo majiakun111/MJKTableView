@@ -33,16 +33,14 @@ static const CGFloat DefaultCellHeight = 40.0;
 
 @synthesize delegate = _delegate;
 
-- (void)dealloc
-{
+- (void)dealloc {
     self.dataSource = nil;
     self.delegate = nil;
     
     [self removeObserver];
 }
 
-- (instancetype)initWithFrame:(CGRect)frame
-{
+- (instancetype)initWithFrame:(CGRect)frame {
     self = [super initWithFrame:frame];
     if (self) {
         [self addObserver];
@@ -51,8 +49,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     return self;
 }
 
-- (__kindof MJKTableViewCell *)dequeueReusableCellWithIdentifier:(NSString *)identifier forIndexPath:(NSIndexPath *)indexPath
-{
+- (__kindof MJKTableViewCell *)dequeueReusableCellWithIdentifier:(NSString *)identifier forIndexPath:(NSIndexPath *)indexPath {
     __block MJKTableViewCell *cell = nil;
     //1.先从可见的lastVisiableCellSet取
     [self.lastVisiableCellSet enumerateObjectsUsingBlock:^(MJKTableViewCell * _Nonnull obj, BOOL * _Nonnull stop) {
@@ -85,8 +82,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     return cell;
 }
 
-- (void)reloadData
-{
+- (void)reloadData {
     //1. 分析CellInfo和计算contentSize
     [self analyzeCellInfosAndCalculateContentSize];
     
@@ -96,8 +92,7 @@ static const CGFloat DefaultCellHeight = 40.0;
 
 #pragma mark - Override
 
-- (void)didMoveToSuperview
-{
+- (void)didMoveToSuperview {
     [super didMoveToSuperview];
     
     [self reloadData];
@@ -105,8 +100,7 @@ static const CGFloat DefaultCellHeight = 40.0;
 
 #pragma mark - Property
 
-- (NSMutableSet<MJKTableViewCell *> *)cacheCellSet
-{
+- (NSMutableSet<MJKTableViewCell *> *)cacheCellSet {
     if (nil == _cacheCellSet) {
         _cacheCellSet = [[NSMutableSet alloc] init];
     }
@@ -114,8 +108,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     return _cacheCellSet;
 }
 
-- (NSMutableArray<MJKCellInfo *> *)cellInfoArray
-{
+- (NSMutableArray<MJKCellInfo *> *)cellInfoArray {
     if (nil == _cellInfoArray) {
         _cellInfoArray = [[NSMutableArray alloc] init];
     }
@@ -125,18 +118,15 @@ static const CGFloat DefaultCellHeight = 40.0;
 
 #pragma mark - Notification
 
-- (void)addObserver
-{
+- (void)addObserver {
     [self addObserver:self forKeyPath:NSStringFromSelector(@selector(contentOffset)) options:NSKeyValueObservingOptionNew | NSKeyValueObservingOptionOld context:nil];
 }
 
-- (void)removeObserver
-{
+- (void)removeObserver {
     [self removeObserver:self forKeyPath:NSStringFromSelector(@selector(contentOffset))];
 }
 
-- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context
-{
+- (void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary<NSKeyValueChangeKey,id> *)change context:(void *)context {
     if (![keyPath isEqualToString:NSStringFromSelector(@selector(contentOffset))]) {
         return;
     }
@@ -150,8 +140,7 @@ static const CGFloat DefaultCellHeight = 40.0;
 
 #pragma mark - PrivateMethod
 
-- (void)analyzeCellInfosAndCalculateContentSize
-{
+- (void)analyzeCellInfosAndCalculateContentSize {
     if (!self.delegate) {
         return;
     }
@@ -187,8 +176,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     [self setContentSize:size];
 }
 
-- (void)layoutNeedDisplayCells
-{
+- (void)layoutNeedDisplayCells {
     if (!self.delegate) {
         return;
     }
@@ -232,22 +220,21 @@ static const CGFloat DefaultCellHeight = 40.0;
     self.lastVisiableCellSet = currentVisiableCellSet;
 }
 
-- (NSArray<MJKCellInfo*> *)getNeedDisplayCellInfoArray
-{
+- (NSArray<MJKCellInfo*> *)getNeedDisplayCellInfoArray {
     CGFloat beginYOffset = self.contentOffset.y;
-    NSInteger beginIndex = [self getIndexForYOffset:beginYOffset startIndex:0 endIndex:[self.cellInfoArray count] -1];
-    if (beginIndex < 0) {
+    NSInteger displayBeginIndex = [self getBeginIndexForYOffset:beginYOffset beginIndex:0 endIndex:[self.cellInfoArray count] -1];
+    if (displayBeginIndex < 0) {
         return nil;
     }
     
     CGFloat endYOffset = self.contentOffset.y + self.frame.size.height;
-    NSInteger endIndex = [self getEndIndexForYOffset:endYOffset startIndex:beginIndex endIndex:[self.cellInfoArray count] -1];
-    if (endIndex < beginIndex) {
+    NSInteger displayEndIndex = [self getEndIndexForYOffset:endYOffset beginIndex:displayBeginIndex + 1 endIndex:[self.cellInfoArray count] -1];
+    if (displayEndIndex < displayBeginIndex) {
         return nil;
     }
     
     NSMutableArray *needDisplayCellInfoArray = @[].mutableCopy;
-    for (NSInteger index = beginIndex; index <= endIndex; index++) {
+    for (NSInteger index = displayBeginIndex; index <= displayEndIndex; index++) {
         MJKCellInfo *cellInfo = [self.cellInfoArray objectAtIndex:index];
         [needDisplayCellInfoArray addObject:cellInfo];
     }
@@ -255,37 +242,46 @@ static const CGFloat DefaultCellHeight = 40.0;
     return needDisplayCellInfoArray;
 }
 
-- (NSInteger)getIndexForYOffset:(CGFloat)yOffset startIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex
-{
+- (NSInteger)getBeginIndexForYOffset:(CGFloat)yOffset beginIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex {
     if (endIndex < startIndex) {
         return -1;
     }
     
     NSInteger middleIndex = (startIndex + endIndex) / 2;
-    if (middleIndex >= [self.cellInfoArray count]) {
-        return -1;
-    }
-    
     MJKCellInfo *cellInfo = [self.cellInfoArray objectAtIndex:middleIndex];
-    if (cellInfo.frame.origin.y <= yOffset  && cellInfo.frame.origin.y + cellInfo.frame.size.height > yOffset) {
-        //cell的y小于yOffset 但是cell的bottom一定要大于yOffset
-        return middleIndex;
-    } else if (cellInfo.frame.origin.y > yOffset ) {
-        //cell的y大于yOffset
-        return [self getIndexForYOffset:yOffset startIndex:startIndex endIndex:middleIndex - 1 ];
-    } else {
-        //cell的y小于yOffset 切cell的bottom也要小于yOffset
-        return [self getIndexForYOffset:yOffset startIndex:middleIndex + 1 endIndex:endIndex];
+        
+    if (cellInfo.frame.origin.y <= yOffset) {//cell的y小于等于yOffset
+        if (cellInfo.frame.origin.y + cellInfo.frame.size.height > yOffset) {//cell的bottom一定要大于yOffset
+            return middleIndex;
+        } else { //cell的bottom小于yOffset
+            return [self getBeginIndexForYOffset:yOffset beginIndex:middleIndex + 1 endIndex:endIndex];
+        }
+    } else {//cell的y大于yOffset
+        return [self getBeginIndexForYOffset:yOffset beginIndex:startIndex endIndex:middleIndex - 1];
     }
 }
 
-- (NSInteger)getEndIndexForYOffset:(CGFloat)yOffset startIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex{
-    //当所有cell的高度和都小于屏幕的高度时
-    if (self.contentSize.height < self.frame.size.height) {
+- (NSInteger)getEndIndexForYOffset:(CGFloat)yOffset beginIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex {
+    if (endIndex < startIndex) {
+        return -1;
+    }
+    
+    if (self.contentSize.height <= self.frame.size.height) {//当所有cell的高度和都小于等于屏幕的高度时
         return endIndex;
     }
     
-    return [self getIndexForYOffset:yOffset startIndex:startIndex endIndex:endIndex];
+    NSInteger middleIndex = (startIndex + endIndex) / 2;
+    MJKCellInfo *cellInfo = [self.cellInfoArray objectAtIndex:middleIndex];
+        
+    if (cellInfo.frame.origin.y < yOffset) {//cell的y小于yOffset
+        if (cellInfo.frame.origin.y + cellInfo.frame.size.height >= yOffset) { //cell的bottom一定要大于等于yOffset
+            return middleIndex;
+        } else { //cell的bottom也要小于yOffset
+            return [self getEndIndexForYOffset:yOffset beginIndex:middleIndex + 1 endIndex:endIndex];
+        }
+    } else { //cell的y大于yOffset
+        return [self getEndIndexForYOffset:yOffset beginIndex:startIndex endIndex:middleIndex - 1];
+    }
 }
 
 @end
