@@ -222,13 +222,13 @@ static const CGFloat DefaultCellHeight = 40.0;
 
 - (NSArray<MJKCellInfo*> *)getNeedDisplayCellInfoArray {
     CGFloat beginYOffset = self.contentOffset.y;
-    NSInteger displayBeginIndex = [self getBeginIndexForYOffset:beginYOffset beginIndex:0 endIndex:[self.cellInfoArray count] -1];
+    NSInteger displayBeginIndex = [self getDispalyBeginIndexForYOffset:beginYOffset beginIndex:0 endIndex:[self.cellInfoArray count] -1];
     if (displayBeginIndex < 0) {
         return nil;
     }
     
     CGFloat endYOffset = self.contentOffset.y + self.frame.size.height;
-    NSInteger displayEndIndex = [self getEndIndexForYOffset:endYOffset beginIndex:displayBeginIndex + 1 endIndex:[self.cellInfoArray count] -1];
+    NSInteger displayEndIndex = [self getDispalyEndIndexForYOffset:endYOffset beginIndex:displayBeginIndex + 1 endIndex:[self.cellInfoArray count] -1];
     if (displayEndIndex < displayBeginIndex) {
         return nil;
     }
@@ -242,7 +242,7 @@ static const CGFloat DefaultCellHeight = 40.0;
     return needDisplayCellInfoArray;
 }
 
-- (NSInteger)getBeginIndexForYOffset:(CGFloat)yOffset beginIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex {
+- (NSInteger)getDispalyBeginIndexForYOffset:(CGFloat)yOffset beginIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex {
     if (endIndex < startIndex) {
         return -1;
     }
@@ -254,14 +254,14 @@ static const CGFloat DefaultCellHeight = 40.0;
         if (cellInfo.frame.origin.y + cellInfo.frame.size.height > yOffset) {//cell的bottom一定要大于yOffset
             return middleIndex;
         } else { //cell的bottom小于yOffset
-            return [self getBeginIndexForYOffset:yOffset beginIndex:middleIndex + 1 endIndex:endIndex];
+            return [self getDispalyBeginIndexForYOffset:yOffset beginIndex:middleIndex + 1 endIndex:endIndex];
         }
     } else {//cell的y大于yOffset
-        return [self getBeginIndexForYOffset:yOffset beginIndex:startIndex endIndex:middleIndex - 1];
+        return [self getDispalyBeginIndexForYOffset:yOffset beginIndex:startIndex endIndex:middleIndex - 1];
     }
 }
 
-- (NSInteger)getEndIndexForYOffset:(CGFloat)yOffset beginIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex {
+- (NSInteger)getDispalyEndIndexForYOffset:(CGFloat)yOffset beginIndex:(NSInteger)startIndex endIndex:(NSInteger)endIndex {
     if (endIndex < startIndex) {
         return -1;
     }
@@ -277,10 +277,10 @@ static const CGFloat DefaultCellHeight = 40.0;
         if (cellInfo.frame.origin.y + cellInfo.frame.size.height >= yOffset) { //cell的bottom一定要大于等于yOffset
             return middleIndex;
         } else { //cell的bottom也要小于yOffset
-            return [self getEndIndexForYOffset:yOffset beginIndex:middleIndex + 1 endIndex:endIndex];
+            return [self getDispalyEndIndexForYOffset:yOffset beginIndex:middleIndex + 1 endIndex:endIndex];
         }
     } else { //cell的y大于yOffset
-        return [self getEndIndexForYOffset:yOffset beginIndex:startIndex endIndex:middleIndex - 1];
+        return [self getDispalyEndIndexForYOffset:yOffset beginIndex:startIndex endIndex:middleIndex - 1];
     }
 }
 
